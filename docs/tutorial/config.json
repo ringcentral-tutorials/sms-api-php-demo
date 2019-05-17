@@ -1,0 +1,6 @@
+{
+  "title": "SMS API PHP Tutorial",
+  "repo": "ringcentral-tutorials/sms-api-php-demo",
+  "description": "A tutorial to teach users to use RingCentral SMS API. Click the \"Start\" button below to start the tutorial.",
+  "heroku": false
+}

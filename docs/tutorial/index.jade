@@ -1,0 +1,231 @@
+.chapter(data-title='SMS Application Walkthrough')
+  .step(data-title='Welcome!', data-file='../README.MD', data-highlight='3-10')
+    h2 Welcome to SMS Application Walk-through
+
+    p This walk-through of an SMS application will show you how to go about building a fully functional SMS application. In this walk-through you will learn:
+
+    ul
+        li How to send an SMS message.
+        li How to send an MMS message
+        li How to track the delivery status of a message.
+        li How to modify the message's read status.
+        li How to delete a message.
+        li How to receive and reply to an SMS message.
+
+    h3 Other Languages
+
+    p This walk-through is also available in the following languages:
+
+    ul
+      li
+        a(href="https://ringcentral-tutorials.github.io/sms-api-python-demo/") Python
+      li
+        a(href="https://ringcentral-tutorials.github.io/sms-api-csharp-demo/") C#
+      li
+        a(href="https://ringcentral-tutorials.github.io/sms-api-nodejs-demo/") Node JS
+
+  .step(data-title='Setup Your Project', data-file='../.env.sample')
+    :markdown
+      ## Clone and Setup the project
+
+      ```
+      $ git clone https://github.com/ringcentral-tutorials/sms-api-php-demo
+      $ cd sms-api-php-demo
+      $ cp .env.sample .env
+      $ curl -sS https://getcomposer.org/installer | php
+      $ php composer.phar install
+      ```
+
+      Specify your app client id and client secret as well as the account login credentials to the constants defined in the .env file.
+
+      ### Important!
+      Your RingCentral app must have the SMS, ReadMessages and EditMessages permissions.
+
+  .step(data-title='Sending an SMS', data-file='../send-sms.php')
+    :markdown
+      ## Sending an SMS message
+
+      Let's create a file named `send-sms.php`.
+
+      It is very convenient to access RingCentral platform using the [RingCentral PHP SDK](https://github.com/ringcentral/ringcentral-php).
+
+      First, we import and create an instance `$rcsdk` of the RingCentral SDK, passing along the client Id, client secret and the server url read from the `.env` file.
+
+      Next, we get the `$platform` object from the `$rcsdk->platform()`
+
+      Then, we call the `$platform->login()` function to authenticate a user. In this step, we pass the username and password and optionally the extension number.
+
+      After we've logged in successfully, we define the `$params` variable and specify the `from`, the `to` and the `text` parameters.
+
+      Finally, we call the `$platform->post('/account/~/extension/~/sms', $params)` method to send the message.
+
+      This code will work right out of the box. So let's try it out. Go to the Terminal window and run `php send-sms.php`.
+
+      You should see the message delivery status output to the screen, and shortly an SMS will arrive on the recipient's phone.
+
+      You have just successfully sent an SMS programmatically from your sandbox to a recipient.
+
+      ### Important
+
+      Bear in mind that you can only send SMS messages from a phone number which belongs to the user who is being authenticated to use the app.
+
+      Pay attention to the `$params['to']` which is an array. This means that you can specify multiple recipients to send a group message.
+
+  .step(data-title='Sending an MMS', data-file='../send-mms.php' data-highlight='14-29')
+    :markdown
+      ## Send an MMS message
+
+      Let's create a file named `send-mms.php`.
+
+      Similar to the previous step, we need to login before we move on to send a message.
+
+      First, we define the `$body` variable, specify the `from`, the `to` and the `text` parameters.
+
+      Then, we call the `$rcsdk->createMultipartBuilder()` function to create a `$request` object and use it to add content attachments to the message as shown on the right-hand pane.
+
+      We also set the endpoint to the `$request` object by calling `->request('/account/~/extension/~/sms')`.
+
+      Finally, we call the `$platform->sendRequest($request)` method to send the message.
+
+      Let's try it out. Go to the Terminal window and run `php send-mms.php`.
+
+      You should see the message delivery status output to the screen, and shortly an MMS will arrive on the recipient's phone.
+
+      ### RingCentral supported MMS content types
+
+      - Images: jpg/jpeg, png, gif, bmp, tif/tiff, svg
+      - Videos: 3gp, mp4, mpeg, flv, wmv, mov
+      - Audio: mp3
+      - Files: vcf/vcard, zip, rtf, html
+
+      ### Attachment size limit
+
+      The maximum size for MMS is carrier-dependent and normally around 1.2MB to 1.4MB.
+
+      You can send multiple attachments in a single MMS message. But the total size of attachments should not exceed the size limit above!
+
+  .step(data-title='Track the delivery', data-file='../send-mms.php', data-highlight='30,35-43')
+    :markdown
+      ## Track the delivery status of a message
+
+      It takes some time for the system to send and deliver a message to a recipient. Delivering a message may fail due to networks conditions or the availability of the recipient's phone number as well. The delivery status of a particular message can be tracked using the __message-store__ endpoint.
+
+      Let's implement the `track_status()` function.
+
+      After sending the MMS message in the previous step, we call the `track_status()` method, passing along the instance of the SDK, the `messageId` and the `messageStatus`.  We'll use the `messageId` to identify the message we want to track the delivery status.
+
+      We make a while loop and check the `$mesasgeStatus` value. If it is equal to "Queued", we cause a second delay then call the `$platform->get(...)` method to read and print out the latest delivery status of the message.
+
+      Let's try it out. Uncomment the line `//track_status($r->json()->id, $r->json()->messageStatus);` and run `php send-mms.php` again.
+
+  .step(data-title='Change the message read status', data-file='../retrieve-modify.php', data-highlight='14-30')
+    :markdown
+      ### Change the message read status
+
+      Every message has the `readStatus` as "Read" or "Unread". We can retrieve a message metadata from the message store and change the `readStatus` as we want.
+
+      Let's create a file named `retrieve-modify.php`.
+
+      Similar to the previous step, we use the SDK to login with the same user before we move on to access the message store.
+
+      To read the metadata of recent messages from the user's message store, we define the `$params` variable and set the `readStatus` value to "Unread" to retrieve only unread messages.
+
+      Then, we call the `$platform->get('/account/~/extension/~/message-store', $params)` to read the message store.
+
+      We parse the response to get an array of records. We iterate thru the `$records` array, read the message id of each message, and use the id to create an endpoint to access that message.
+
+      To change the message `readStatus` value to "Read", we set the `$params['readStatus']` value to "Read", then call the `$platform->put("/account/~/extension/~/message-store/{$messageId}", $params)` to change the `readStatus` of that message.
+
+      Let's try it out. Go to the Terminal window and run `php retrieve-modify.php`.
+
+      ### Specify other request parameters
+
+      You can set other query parameters such as the `dateFrom` and `dateTo` to retrieve messages created within the specified date and time period. The default date and time period is the current time minus 24 hours.
+
+  .step(data-title='Delete a message', data-file='../retrieve-delete.php', data-highlight='14-28')
+    :markdown
+      ### Delete a message
+
+      Let's create a file named `retrieve-delete.php`.
+
+      Similar to the previous step, we retrieve recent messages using the `readStatus` filter but this time, we read those messages which have the `readStatus` as "Read".
+
+      Then we iterate thru the `$records` array, read the message id of each message, and use the id to create an endpoint to access that message, and call the `$platform->delete('/account/~/extension/~/message-store/{$messagesId}")` to delete the message.
+
+      Let's try it out. Go to the Terminal window and run `php retrieve-delete.php`.
+
+      If you want to delete all the messages from the `records` array, comment out the __break;__ line.
+
+.chapter(data-title='Receive - Reply to SMS messages')
+  .step(data-title='Receiving SMS messages', data-file='../receive-reply.php', data-highlight='17-48')
+    :markdown
+      In this step, you will learn how to listen to incoming SMS messages and new voicemail messages, then reply with an SMS message to the sender of that incoming message or incoming call.
+
+      ### Listen to incoming SMS and new voicemail messages
+
+      Let's create a file named `receive-reply.php`.
+
+      Similar to the previous step, we use the SDK to login with the same user before we move on to subscribe for notifications.
+
+      First, we call the `$rcsdk->createSubscription()` method to get the `$subscription` object.
+
+      Then, we define an `$eventFilters` array and add the following filters to the array:
+
+      - "/account/~/extension/~/message-store/instant?type=SMS": for receiving incoming SMS notifications.
+      - "/account/~/extension/~/voicemail": for receiving new voicemail notifications.
+
+      As you can see, we can specify multiple event notifications in a single subscription to get notified for different types of events without the need of creating multiple subscriptions.
+
+      We call `$subscription->addEvents( $eventFilters );` to set the `$eventFilters`.
+
+      Next, we implement the `$notificationHandler` function. This is a callback function which will be called every time we receive a notification of the event we subscribed for. We will discuss about details of the callback function in the next step.
+
+      Then, we add the `$notificationHandler` to the `$subscription` object by calling `$subscription->addListener(Subscription::EVENT_NOTIFICATION, $notificationHandler)`.
+
+      We also call `$subscription->setKeepPolling(true);` to keep the subscription process running in a loop.
+
+      Finally, we call `$subscription->register()` to register the subscription and should be ready to receive notifications.
+
+      ### Handle other subscription situations
+
+      You can implement the other subscription handlers with any other event types listed below to handle different subscription situations.
+
+      ```
+      - Subscription::EVENT_REMOVE_SUCCESS
+      - Subscription::EVENT_REMOVE_ERROR
+      - Subscription::EVENT_RENEW_SUCCESS
+      - Subscription::EVENT_RENEW_ERROR
+      - Subscription::EVENT_SUBSCRIBE_SUCCESS
+      - Subscription::EVENT_SUBSCRIBE_ERROR
+      - Subscription::EVENT_TIMEOUT
+      ```
+
+      ### Subscription limitations
+
+      Each account can register up to maximum 20 subscriptions. Therefore, using multiple event notifications in a subscription, when possible, will help overcome the limitation.
+
+      Active subscriptions will expire. The `subscription` object created by the SDK will renew the subscription automatically on your behalf as long as your app is still logged in and the platform refresh token is still valid.
+
+      ### PubNub Notification Alternative
+
+      The subscription we created above uses [PubNub](https://www.pubnub.com/).
+
+      There is also a [WebHook way to do subscription](https://developers.ringcentral.com/guide/notifications/quick-start/webhook/php). We won't dive into detail here. You can click the link to read more.
+
+  .step(data-title='Replying with a SMS message', data-file='../receive-reply.php', data-highlight='30-43, 53-63')
+    :markdown
+      ## Replying with an SMS message
+
+      When there is an incoming SMS message or a new voicemail, we will receive the notification via the `notificationHandler` callback function.
+
+      As we registered for multiple event notifications, we need to detect which event notification was triggered before we take an action on the notification.
+
+      We parse the `$message` and simply check the `$payload['event']` value to see if it contains the name of the event type we've registered for.
+
+      In this tutorial, if it is the "/message-store/instant" or the "/voicemail", we parse the notification body, get the sender's phone number and compose a reply text message then call the `reply_sms_message()` function to send the message.
+
+      Let's try it out. Go to the Terminal window and run `php receive-reply.php`.
+
+      ## Congratulations!
+
+      And that's it. You should have successfully build a number of the components of an SMS application.

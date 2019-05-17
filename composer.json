@@ -1,0 +1,6 @@
+{
+  "require": {
+    "ringcentral/ringcentral-php": "^2.1",
+    "symfony/dotenv": "^4.0"
+  }
+}
